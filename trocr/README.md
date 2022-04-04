@@ -22,14 +22,11 @@ The TrOCR models are also provided in the Huggingface format.[[Documentation](ht
 
 ## Installation
 ~~~bash
-conda create -n trocr python=3.7
-conda activate trocr
-git clone https://github.com/microsoft/unilm.git
-cd unilm
-cd trocr
-pip install pybind11
-pip install -r requirements.txt
-pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" 'git+https://github.com/NVIDIA/apex.git'
+conda create -n trocr2 pybind11 natsort tensorboard nltk h5py numpy 
+conda activate trocr2
+conda install pytorch==1.7.1 torchvision==0.8.2 torchaudio==0.7.2 cudatoolkit=11.0 -c pytorch 
+conda install -c conda-forge fairseq 
+pip install timm==0.4.5 
 ~~~
 
 ## Fine-tuning and evaluation
@@ -90,6 +87,14 @@ $(which fairseq-generate) \
         --bpe gpt2 --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/gpt2_with_mask.dict.txt \ # --bpe sentencepiece --sentencepiece-model ./unilm3-cased.model --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/unilm3.dict.txt ## For small models
         --fp16 \
         ${DATA}
+        
+fairseq-generate ^
+--data-type STR --user-dir ./ --task text_recognition --input-size 384 ^
+--beam 10 --scoring cer2 --gen-subset test --batch-size ${BSZ} ^
+--path ${MODEL} --results-path ${RESULT_PATH} --preprocess DA2 ^
+--bpe gpt2 --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/gpt2_with_mask.dict.txt ^
+--fp16 ^
+${DATA}
 ~~~
 
 ### Fine-tuning on SROIE
