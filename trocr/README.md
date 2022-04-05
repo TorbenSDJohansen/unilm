@@ -21,6 +21,18 @@ The TrOCR models are also provided in the Huggingface format.[[Documentation](ht
 | TrOCR-Large                    | 558M       | SROIE   | 96.60 (F1)  |
 
 ## Installation
+```
+conda create -n fairseq numpy pandas pillow scikit-learn opencv matplotlib pyyaml
+conda activate fairseq
+conda install pytorch torchvision torchaudio cudatoolkit=11.3 -c pytorch
+pip install pybind11 imutils timm 
+pip install fastwer
+pip install natsort
+pip install nltk
+pip install git+https://github.com/pytorch/fairseq.git 
+pip install -v --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" git+https://github.com/NVIDIA/apex.git
+```
+
 ~~~bash
 conda create -n trocr2 pybind11 natsort tensorboard nltk h5py numpy 
 conda activate trocr2
@@ -51,6 +63,28 @@ pip install fastwer
 
 
 ### Fine-tuning on IAM
+```
+set BSZ=8
+set valid_BSZ=16
+set DATA=W:\BDADSharedData\tsdj-transfer\IAM
+set RESULT_PATH=W:\BDADSharedData\tsdj-transfer\tmp
+set MODEL=W:\BDADSharedData\tsdj-transfer\trocr-small-handwritten.pt
+set SAVE_PATH=W:\BDADSharedData\tsdj-transfer
+set LOG_DIR=W:\BDADSharedData\tsdj-transfer
+
+python -m torch.distributed.launch --nproc_per_node=2 ^
+    fairseq-train ^
+    --data-type STR --user-dir ./ --task text_recognition ^
+    --arch trocr_base ^
+    --seed 1111 --optimizer adam --lr 2e-05 --lr-scheduler inverse_sqrt ^
+    --warmup-init-lr 1e-8 --warmup-updates 500 --weight-decay 0.0001 --log-format tqdm ^
+    --log-interval 10 --batch-size %BSZ% --batch-size-valid %valid_BSZ% --save-dir %SAVE_PATH% ^
+    --tensorboard-logdir %LOG_DIR% --max-epoch 300 --patience 20 --ddp-backend legacy_ddp ^
+    --num-workers 8 --preprocess DA2 --update-freq 1 ^
+    --bpe gpt2 --decoder-pretrained roberta ^
+    --finetune-from-model %MODEL% --fp16 ^
+    %DATA%
+```
 ~~~bash
 export MODEL_NAME=ft_iam
 export SAVE_PATH=/path/to/save/${MODEL_NAME}
@@ -88,14 +122,20 @@ $(which fairseq-generate) \
         --bpe gpt2 --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/gpt2_with_mask.dict.txt \ # --bpe sentencepiece --sentencepiece-model ./unilm3-cased.model --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/unilm3.dict.txt ## For small models
         --fp16 \
         ${DATA}
-        
+
+
+set BSZ=16
+set DATA=W:\BDADSharedData\tsdj-transfer\IAM
+set RESULT_PATH=W:\BDADSharedData\tsdj-transfer\tmp
+set MODEL=W:\BDADSharedData\tsdj-transfer\trocr-small-handwritten.pt
+
 fairseq-generate ^
 --data-type STR --user-dir ./ --task text_recognition --input-size 384 ^
---beam 10 --scoring cer2 --gen-subset test --batch-size ${BSZ} ^
---path ${MODEL} --results-path ${RESULT_PATH} --preprocess DA2 ^
+--beam 10 --scoring cer2 --gen-subset test --batch-size %BSZ% ^
+--path %MODEL% --results-path %RESULT_PATH% --preprocess DA2 ^
 --bpe gpt2 --dict-path-or-url https://layoutlm.blob.core.windows.net/trocr/dictionaries/gpt2_with_mask.dict.txt ^
 --fp16 ^
-${DATA}
+%DATA%
 ~~~
 
 ### Fine-tuning on SROIE
