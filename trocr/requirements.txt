@@ -10,4 +10,4 @@ nltk
 h5py
 numpy
 fastwer
-fairseq
+git+https://github.com/pytorch/fairseq.git
